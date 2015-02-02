@@ -1,0 +1,142 @@
+apply plugin: 'maven'
+apply plugin: 'eclipse'
+
+
+////////////////////// configure eclipse //////////////////////
+eclipse.classpath.plusConfigurations = [configurations.compile]
+//.classpath
+eclipse.classpath.file {
+    beforeMerged { classpath ->
+        classpath.entries.removeAll() { c ->
+            c.kind == 'src'
+        }
+    }
+    // Direct manipulation of the generated classpath XML
+    withXml {
+        def node = it.asNode()
+
+        def i =1;
+        def f = ""
+        file("project.properties").eachLine { line ->  
+            f += "${line}\n"  
+        }  
+        node.children().each { c ->
+            def path = c.attribute('path')
+            def kind = c.attribute('kind')
+            if(kind.equals('src')&&path.startsWith("/")){
+                f += "android.library.reference."+ (i++) +"=.."+path+"\n"
+            }
+        }
+        
+        file("project.properties").withPrintWriter { printWriter ->  
+             printWriter.println(f)  
+        }  
+
+        // Filter out dependencies unwanted for Eclipse
+        node.children().removeAll() { c ->
+            def path = c.attribute('path')
+            def kind = c.attribute('kind')
+            path != null && (
+                    kind.equals('src')
+                    ||kind.equals('con')
+            )
+        }
+
+        if(project.name.endsWith(".test")||project.name.endsWith("-test")){
+            rootProject.childProjects.each{
+                if(!it.key.endsWith(".test")&&!it.key.endsWith("-test")){
+                    node.appendNode('classpathentry combineaccessrules="false" kind="src" path="/'+ it.key + '"')
+                }
+            }
+        }
+
+        // Main source
+        node.appendNode('classpathentry kind="src" path="src"')
+        node.appendNode('classpathentry kind="src" path="gen"')
+        node.appendNode('classpathentry kind="con" path="com.android.ide.eclipse.adt.ANDROID_FRAMEWORK"')
+    }
+}
+//.project
+eclipse.project {
+    name = "$project.name"
+    // Letting Eclipse know that the project is Android
+   
+    buildCommand 'com.android.ide.eclipse.adt.ResourceManagerBuilder'
+    buildCommand 'com.android.ide.eclipse.adt.PreCompilerBuilder'
+    buildCommand 'com.android.ide.eclipse.adt.ApkBuilder'
+}
+eclipse.project.natures=["com.android.ide.eclipse.adt.AndroidNature","org.eclipse.jdt.core.javanature"]
+
+eclipse.project.file.withXml  { project ->
+    
+    def node = project.asNode()
+    def _name = node.name.getAt(0).text()
+    if(_name.endsWith(".test")&&!it.key.endsWith("-test")){
+        rootProject.childProjects.each{
+            if(!it.key.endsWith(".test")){
+                node.projects.getAt(0).appendNode("project",it.key)
+            }
+        }
+    }
+
+    def f = file("jni")
+    if(f.exists()){
+        def _project = new XmlParser().parse(file("../gradle/cdt/project"))
+        
+        node.natures.get(0).replaceNode(_project.natures)
+        node.buildSpec.get(0).replaceNode(_project.buildSpec)
+
+        def cfile = file(".cproject")  
+        if (cfile.exists())   
+            cfile.delete()  
+        def printWriter = cfile.newPrintWriter() 
+        printWriter.write(file("../gradle/cdt/cproject").getText())
+        printWriter.flush()  
+        printWriter.close()  
+    }
+}
+
+android {
+    compileOptions.encoding="UTF-8"
+    compileSdkVersion rootProject.compileSdkVersion
+    buildToolsVersion rootProject.buildToolsVersion
+    lintOptions {
+        abortOnError false
+    }
+    defaultConfig {
+        minSdkVersion rootProject.minSdkVersion
+        targetSdkVersion rootProject.targetSdkVersion
+        versionCode rootProject.versionCode
+        versionName rootProject.versionName
+    }
+    buildTypes {
+            release {
+                minifyEnabled false
+                proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            }
+        }
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+            java.srcDirs = ['src']
+            resources.srcDirs = ['src']
+            aidl.srcDirs = ['src']
+            renderscript.srcDirs = ['src']
+            res.srcDirs = ['res']
+            assets.srcDirs = ['assets']
+            jni.srcDirs = ['jni']
+        }
+
+        // Move the tests to tests/java, tests/res, etc...
+        instrumentTest.setRoot('tests')
+
+        // Move the build types to build-types/<type>
+        // For instance, build-types/debug/java, build-types/debug/AndroidManifest.xml, ...
+        // This moves them out of them default location under src/<type>/... which would
+        // conflict with src/ being used by the main source set.
+        // Adding new build types or product flavors should be accompanied
+        // by a similar customization.
+        debug.setRoot('build-types/debug')
+        release.setRoot('build-types/release')
+    }
+}

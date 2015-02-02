@@ -1,0 +1,15 @@
+apply plugin: 'com.android.application'
+
+apply from: "$rootProject.projectDir/gradle/config.gradle"
+
+rootProject.projectType="app"
+
+file("project.properties").withPrintWriter { printWriter ->  
+     printWriter.println("target=android-$rootProject.compileSdkVersion\n")  
+}  
+
+android {
+    defaultConfig {
+        applicationId "$project.name"
+    }
+ }

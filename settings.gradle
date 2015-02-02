@@ -1,0 +1,4 @@
+include 'hehe-common'
+include 'hehe-nfc-reader'
+
+include 'hehe-test'

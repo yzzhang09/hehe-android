@@ -1,0 +1,77 @@
+ext.compileSdkVersion=19
+ext.buildToolsVersion="19.1.0"
+ext.minSdkVersion=19
+ext.targetSdkVersion=19
+ext.versionCode = 1
+ext.versionName = "1.0.0"
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:1.0.0'
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+ext.appPlugin = "$rootProject.projectDir/gradle/appPlugin.gradle"
+ext.libPlugin = "$rootProject.projectDir/gradle/libPlugin.gradle"
+
+allprojects {
+    repositories {
+        jcenter()
+    }
+}
+
+ext.projectType=""
+
+
+project(':hehe-common') {
+
+    apply from: "$libPlugin"
+    
+    android {
+        defaultConfig {
+        }
+    }
+
+    dependencies {
+        compile 'com.google.code.gson:gson:1.7.2'
+        compile fileTree(dir: 'libs', include: ['*.jar'])
+    }
+
+}
+
+project(':hehe-nfc-reader') {
+
+    apply from: "$appPlugin"
+    
+    android {
+        defaultConfig {
+        }
+    }
+
+    dependencies {
+        compile fileTree(dir: 'libs', include: ['*.jar'])
+        compile project(":hehe-common")
+    }
+
+}
+
+project(':hehe-test') {
+
+    apply from: "$appPlugin"
+    
+    android {
+        defaultConfig {
+        }
+    }
+
+    dependencies {
+        compile fileTree(dir: 'libs', include: ['*.jar'])
+    }
+
+}
+

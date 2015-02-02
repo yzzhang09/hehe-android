@@ -1,0 +1,9 @@
+apply plugin: 'com.android.library'
+
+apply from: "$rootProject.projectDir/gradle/config.gradle"
+
+rootProject.projectType="lib"
+
+file("project.properties").withPrintWriter { printWriter ->  
+     printWriter.println("target=android-$rootProject.compileSdkVersion\nandroid.library=true\n")  
+}  
